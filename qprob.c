@@ -4,6 +4,12 @@
 #include <limits.h>
 #include <time.h>
 
+/**
+ * This program is designed to simulate and solve the following problem. Given three
+ * random values, a, b, and c, all of which are bounded by [1, n], what is the probability
+ * that two of the values sum to the third?
+ */
+
 void ptrPrint(int *nums, int len) {
 	int i = 0;
 	for (i = 0; i < len; i++) {
