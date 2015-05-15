@@ -1,124 +1,119 @@
-/* PROBLEM 14
+/* Author: Rohit Dilip
+ * Date: 2015/05/15
+ * ----------------------
+ * PROBLEM 14
  * Given the Collatz sequence as follows:
  * if n is even, n = n / 2
  * if n is odd, n = 3n + 1
  * We can generate chains of numbers that eventually end at 1. 
- * 		What starting number under one million produces the largest chain?
- *		To solve this problem, we use a technique called memoization. 
- * 		Instead of trying to compute all the chain lengths, which would tak
- *		a very unsigned long long time, we store the lengths of the chains, aunsigned long long with
- * 		the starting value, and search for the value as we go aunsigned long long. 
- */
+ * What starting number under one million produces the largest chain?
+ * To solve this problem, we use a technique called memoization. We
+ * store the chain lengths as we execute the sequence, and thus can
+ * later access already found chain lengths if we re encounter them.
+ */		
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <math.h>
-#define LIMIT 10
-
-typedef struct chainVal {
-	unsigned long long val;
-	unsigned long long chain;
-} chainVal;
-
-unsigned long long search(chainVal *vals, unsigned long long itm , unsigned long long len);
+#include <stdlib.h>
+#include <time.h>
+#define LIMIT 1000000
 
 /* funtion: collatz
  * ------------------
- * Performs the collatz sequence on a given input value, and increments
- * the chain by one in the process.
+ * Given an input number, begins to perform the Collatz sequence. First 
+ * searches for the number in the cache, if found, adds that value's 
+ * chain length to the current chain length. If not found, executes
+ * collatz sequence on the number until a known chain length is found
+ * or the number reaches one, increments count by one each time.
+
  * 
  * val: value of input number
  * chain: length of current chain
  * 
  */
 
-	
-void collatz (unsigned long long *val, unsigned long long *chain) {
-	unsigned long long temp_val = *val;
-	unsigned long long temp_chain = *chain;
-
-	if (temp_val % 2 == 0) {
-		temp_val /= 2;
-		temp_chain ++;
-	} else {
-		temp_val = temp_val * 3 + 1;
-		temp_chain ++;
+unsigned collatz(unsigned long n, unsigned int *cachePtr) {
+	unsigned count = 1;
+	//printf("The starting value is %lu\n", n);
+	while (n > 1) {
+		if (n < LIMIT && cachePtr[n] != 0) {
+			//printf("\tFound in memory\n");
+			count += cachePtr[n] - 1;
+			break;
+		} else if (n % 2 == 0) {
+			//printf("\t%lu Is even --> %lu\n", n, n / 2);
+			n /= 2;
+		} else {
+			//printf("\t%lu is odd --> %lu\n", n, 3 * n + 1);
+			n = 3 * n + 1;
+		}
+		count ++;
 	}
+	//printf("\tThe final count is %d\n", count);
 
-	*val = temp_val;
-	*chain = temp_chain;
+
+	return count;
 }
 
-
-/* function: search
+/* funtion: find_max_collatz
  * ------------------
- * Searches for a specific chainVal within a memory
- *
- * itm: Specific value to search for
- * len: Length of memory
- * vals: Pointer to first chainVal in memory
- *
- * returns: the length of the chain if the value is there, otherwise 0
+ * Given a mimum input value, a maximum input value, and a pointer
+ * to the number cache, this executes the collatz sequence on every
+ * value between min and max, finding the largest chain by continually
+ * comparing the chain length of iter (between min and max) with the
+ * max chain length (m).
+
+ * min: minimum value in range
+ * max: maxmum value in range
+ * cachePtr: Pointer to cache array
+ * m: largest chain length
+ * num: number corresponding to largest chain length
+ * count: current working chain length
+ * iter: current working number
+ * 
+ * returns: The number yielding the largest chain length between min and max
  */
 
-unsigned long long search(chainVal *vals, unsigned long long itm , unsigned long long len) {
-	unsigned long long i;
+unsigned long find_max_collatz(unsigned int min, unsigned int max, unsigned int *cachePtr) {
+	unsigned int m = 1;
+	unsigned long num = 1;
+	unsigned int count = 1;
+	unsigned long iter = min;
+	
+	//unsigned int M[LIMIT];
 
-	for (i = 0; i < len; i++) {
-		if (vals->val == itm) {
-			return (vals->chain);
+	while (iter < max) {
+		count = collatz(iter, cachePtr);
+		if (count > m) {
+			m = count;
+			num = iter;
 		}
+
+		if (iter < LIMIT) {
+			cachePtr[iter] = count;
+		}
+
+		iter += 1;
 	}
 
-	return 0;
-}
 
-unsigned long long problem14 () {
-	unsigned long long i; 
-	unsigned long long val;
-	unsigned long long *valPtr;
-
-	unsigned long long len = 0;
-
-	unsigned long long *chainLenPtr;
-	unsigned long long chainLen;
-
-	unsigned long long maxChainLen = 0;
-	chainVal inp;
-
-	chainVal *vals = malloc(sizeof(chainVal));
-
-	for	(i = 1; i < LIMIT; i++) {
-		chainLen = 0;
-		chainLenPtr = &chainLen;
-		
-		val = i;
-		//printf("Testing value %ld\n", val);
-		valPtr = &val;
-
-		while (val != 1) {
-			collatz(valPtr, chainLenPtr);
-			if (search(vals, val, len)) {
-				chainLen += search(vals, val, len); 
-				break;
-			}
-		}
-		chainLen++;
-		//printf("\tThis has %ld terms\n", chainLen);
-		if (chainLen > maxChainLen) {
-			maxChainLen = chainLen;
-		}
-
-		inp.val = i;
-		inp.chain = chainLen;
-		*(vals + i) = inp;
-		len ++;
-	}
-
-	return(maxChainLen);
+	return num;
 }
 
 int main(int argc, char *argv[]) {
-	printf("%llu\n", problem14());
+	clock_t start, end;
+	start = clock();
+	int i;
+	unsigned long ans;
+	unsigned int CACHE[LIMIT];	
+
+	for (i = 0; i < LIMIT; i++) {
+		CACHE[i] = 0;
+	}
+
+	unsigned int *cachePtr = CACHE;
+
+	ans = find_max_collatz(1, LIMIT, cachePtr);
+	end = clock();
+	printf("The answer is %lu, and it took %f seconds to find\n", ans, 				(float)(end - start) / CLOCKS_PER_SEC);
 }
-		
